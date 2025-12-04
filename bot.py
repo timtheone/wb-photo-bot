@@ -151,10 +151,7 @@ async def handle_articles(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if found:
         summary.append("Нашлись: " + ", ".join(found))
     if not_found:
-        summary.
-
-
-    append("Не найдено: " + ", ".join(not_found))
+        summary.append("Не найдено: " + ", ".join(not_found))
 
     await chat.send_message("\n".join(summary))
 
