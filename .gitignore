@@ -1,0 +1,15 @@
+# НЕ отправляем реальные токены
+config.py
+
+# Виртуальное окружение
+venv/
+
+# Служебные файлы
+__pycache__/
+*.pyc
+.DS_Store
+
+# Bot manager files
+bot.pid
+bot.log
+bot_error.log
