@@ -87,30 +87,26 @@ async def handle_articles(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     text = msg.text or ""
 
-    raw = re.findall(r"\d+", text)
+    # ВСЕ подряд числа как есть (без удаления дублей)
+    articles = re.findall(r"\d+", text)
 
-    if not raw:
+    if not articles:
         if chat.type == "private":
             await chat.send_message("Пришли артикулы WB 🙂")
         return
 
-    seen = set()
-    articles = []
-    for nm in raw:
-        if nm not in seen:
-            seen.add(nm)
-            articles.append(nm)
-
     MAX_ITEMS = 100
     if len(articles) > MAX_ITEMS:
         articles = articles[:MAX_ITEMS]
-        await chat.send_message(f"Обнаружено больше {MAX_ITEMS}, обработаю первые {MAX_ITEMS}.")
+        await chat.send_message(
+            f"Обнаружено больше {MAX_ITEMS} артикулов, обработаю первые {MAX_ITEMS}."
+        )
 
     await chat.send_message(f"Нашёл {len(articles)} артикулов, ищу фото...")
 
-    found = []
-    not_found = []
-    photos = []
+    found = []      # сюда пишем артикулы, по которым фото нашлось (включая дубли)
+    not_found = []  # сюда — те, по которым не нашли (тоже с дублями)
+    photos = []     # список URL фоток (по одному на каждый артикул, включая дубли)
 
     for nm in articles:
         url = get_photo(nm)
@@ -121,12 +117,11 @@ async def handle_articles(update: Update, context: ContextTypes.DEFAULT_TYPE):
             not_found.append(nm)
         await asyncio.sleep(0.1)
 
-    # =============== ОТПРАВКА АЛЬБОМОВ =================
+    # === ОТПРАВКА АЛЬБОМОВ ПО 10, С КОЛИЧЕСКОМ АЛЬБОМОВ ===
 
     CHUNK = 10
 
     if len(photos) > 1:
-        # делим фото на альбомы по 10
         for i in range(0, len(photos), CHUNK):
             chunk = photos[i:i + CHUNK]
             media = [InputMediaPhoto(url) for url in chunk]
@@ -135,17 +130,16 @@ async def handle_articles(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await chat.send_media_group(media)
             except Exception as e:
                 logger.error(f"Ошибка отправки альбома: {e}")
-            
-            await asyncio.sleep(0.6)  # пауза между альбомами — ВАЖНО!
+
+            await asyncio.sleep(0.6)  # пауза между альбомами
     else:
-        # если одно фото → отправляем обычным способом
         if len(photos) == 1:
             try:
                 await chat.send_photo(photos[0])
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Ошибка отправки фото: {e}")
 
-    # ============ ИТОГОВЫЙ ОТЧЁТ ============
+    # === ИТОГОВЫЙ ОТЧЁТ (с учётом дублей) ===
 
     summary = [
         "Готово ✅",
@@ -157,7 +151,10 @@ async def handle_articles(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if found:
         summary.append("Нашлись: " + ", ".join(found))
     if not_found:
-        summary.append("Не найдено: " + ", ".join(not_found))
+        summary.
+
+
+    append("Не найдено: " + ", ".join(not_found))
 
     await chat.send_message("\n".join(summary))
 
